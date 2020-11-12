@@ -133,5 +133,3 @@ def max_word():
         temp = word_count(my_string)
         print(f" CHỦ ĐỀ: {x} \n  - Từ xuất hiện nhiều nhất: {temp[0]} \n  - Số lần xuất hiện: {temp[1]}\n")
 
-
-get_news()
