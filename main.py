@@ -26,7 +26,7 @@ while True:
         get_category()
 
     elif ans == "4":
-        max_word()
+        common_word()
 
     elif ans == "0":
         break

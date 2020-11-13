@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
 import news
 import database
 import matplotlib.pyplot as plt
 import numpy as np
 import deletestopword
+from sklearn.feature_extraction.text import CountVectorizer
+import operator
 
 
 def get_news():
@@ -16,31 +19,30 @@ def get_news():
 
 
 def search_news():
-    # Search text
     search_text = input('Từ khóa: ')
 
-    # Connect to database
+    # kết nối database
     db = database.connect_database()
 
-    # Create index
+    # tạo index
     db.create_index([('quote', 'text')])
 
-    # Search and return list
+    # search và trả về list kết quả
     data = list(db.find({'$text': {'$search': search_text}}).limit(10))
 
-    # Check search invalid
+    # có tìm được bài viết không?
     if len(data) == 0:
         print(f'\n\nKhông tìm thấy bài viết có từ khóa "{search_text}"! \n')
         return
 
-    # Print search result
+    # 10 bài viết liên quan
     i = 0
     print(f'Các bài viết có từ khóa "{search_text}":\n')
     for x in data:
         i += 1
         print(f"     {i}. {x['title']}")
 
-        # Choose post
+    # chọn bài để đọc
     while True:
         choose = input("\nBài viết muốn xem (Enter để bỏ qua): ")
 
@@ -48,7 +50,7 @@ def search_news():
         if choose == '':
             break
 
-        # Print news
+        # in bài viết đã chọn
         try:
             hihi = data[int(choose) - 1]['title']
             print('\n CHI TIẾT BÀI VIẾT: \n')
@@ -63,73 +65,40 @@ def search_news():
 
 
 def get_category():
-    # Syntax
-    counts = dict()
     name = []
     value = []
 
-    # Connect to database
+    # kết nối database
     db = database.connect_database()
-    data = db.find()
 
-    # Get all category
-    for x in data:
-        word = x['category']
-
-        if word in counts:
-            counts[word] += 1
-        else:
-            counts[word] = 1
-
+    # group và in số lượng từng thể loại
     print('\n SỐ LƯỢNG BÀI VIẾT THEO TỪNG THỂ LOẠI:\n')
-    for x, y in counts.items():
-        print(f'   - {x}: {y}')
-        name.append(x)
-        value.append(y)
+    for x in db.aggregate([{'$group': {'_id': '$category', 'count': {'$sum': 1}}}]):
+        print(f"{x['_id']}: {x['count']}")
+        name.append(x['_id'])
+        value.append(x['count'])
 
-    # Chart
-    y_pos = np.arange(len(name))
-    plt.bar(y_pos, value, color='blue')
+    # vẽ biểu đồ
+    plt.barh(name, value, color='blue')
     plt.title("THỐNG KÊ SỐ LƯỢNG BÀI VIẾT THEO TỪNG THỂ LOẠI")
-    plt.xticks(y_pos, name, rotation=90, fontsize=10)
     plt.show()
-    # Save as png
-    # plt.savefig('./image/chart.png', dpi=1500)
 
 
-def word_count(string):
-    counts = dict()
-    string = deletestopword.remove_stopword(string)
-    words = string.split()
-
-    for word in words:
-        if word in counts:
-            counts[word] += 1
-        else:
-            counts[word] = 1
-
-    sort_count = sorted(counts.items(), key=lambda x: x[1], reverse=True)
-
-    return sort_count[0]
-
-
-def max_word():
-    # Syntax
-    category = []
-
-    # Connect to database
+def common_word():
+    # kết nối database
     db = database.connect_database()
-    data = db.find()
 
-    # Get all category
-    for word in data:
-        if word['category'] not in category:
-            category.append(word['category'])
-
-    for x in category:
+    for category in db.aggregate([{'$group': {'_id': '$category'}}]):
         my_string = ''
-        for i in db.find({'category': x}):
-            my_string += str(i['content'])
-        temp = word_count(my_string)
-        print(f" CHỦ ĐỀ: {x} \n  - Từ xuất hiện nhiều nhất: {temp[0]} \n  - Số lần xuất hiện: {temp[1]}\n")
 
+        for col in db.find({'category': category['_id']}):
+            my_string += deletestopword.remove_stopword(col['content'] + col['title'] + col['quote'])
+
+        list_string = [my_string]
+        vector = CountVectorizer().fit(list_string)
+        bag_of_words = vector.transform(list_string)
+        sum_words = bag_of_words.sum(axis=0)
+        words_freq = [(word, sum_words[0, idx]) for word, idx in vector.vocabulary_.items()]
+        words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
+
+        print(f"\nThể loại: {category['_id']} \n - Từ xuất hiện nhiều nhất: {words_freq[0][0]} \n - Số lần xuất hiện: {words_freq[0][1]}")
