@@ -1,5 +1,4 @@
 from menu import *
-from os import system
 
 
 menu = """
@@ -33,4 +32,3 @@ while True:
 
     else:
         print('Không tồn tài chức năng này!')
-        system('pause')

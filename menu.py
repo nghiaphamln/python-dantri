@@ -2,10 +2,8 @@
 import news
 import database
 import matplotlib.pyplot as plt
-import numpy as np
 import deletestopword
 from sklearn.feature_extraction.text import CountVectorizer
-import operator
 
 
 def get_news():
@@ -46,7 +44,7 @@ def search_news():
     while True:
         choose = input("\nBài viết muốn xem (Enter để bỏ qua): ")
 
-        # Enter to exit
+        # Enter để thoát
         if choose == '':
             break
 

@@ -26,4 +26,3 @@ def remove_stopword(text):
                 my_string = my_string + word + ' '
 
     return my_string
-
