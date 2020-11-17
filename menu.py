@@ -3,7 +3,10 @@ import news
 import database
 import matplotlib.pyplot as plt
 import deletestopword
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from underthesea import word_tokenize
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 
 def get_news():
@@ -22,44 +25,33 @@ def search_news():
     # kết nối database
     db = database.connect_database()
 
-    # tạo index
-    db.create_index([('quote', 'text')])
+    all_news = []
 
-    # search và trả về list kết quả
-    data = list(db.find({'$text': {'$search': search_text}}).limit(10))
+    for x in db.aggregate([{'$group': {'_id': '$category', 'count': {'$sum': 1}}}]):
+        for doc in db.find({'category': x['_id']}):
+            all_news.append(doc['title'] + '\n' + doc['quote'])
 
-    # có tìm được bài viết không?
-    if len(data) == 0:
-        print(f'\n\nKhông tìm thấy bài viết có từ khóa "{search_text}"! \n')
-        return
+    vector = TfidfVectorizer()
+    x = vector.fit_transform(all_news)
+    search_text = search_text.lower()
+    te = word_tokenize(search_text, format='text')
+    te = deletestopword.remove_stopword(te)
+    te = vector.transform([te])
+    length = str(te).split('\t')
 
-    # 10 bài viết liên quan
-    i = 0
-    print(f'Các bài viết có từ khóa "{search_text}":\n')
-    for x in data:
-        i += 1
-        print(f"     {i}. {x['title']}")
+    if len(length) > 1:
+        re = cosine_similarity(x, te)
 
-    # chọn bài để đọc
-    while True:
-        choose = input("\nBài viết muốn xem (Enter để bỏ qua): ")
+        result = []
 
-        # Enter để thoát
-        if choose == '':
-            break
+        for i in range(len(re)):
+            result.append(re[i][0])
 
-        # in bài viết đã chọn
-        try:
-            hihi = data[int(choose) - 1]['title']
-            print('\n CHI TIẾT BÀI VIẾT: \n')
-            print(f"  - Tiêu đề: {data[int(choose) - 1]['title']}")
-            print(f"  - Thể loại: {data[int(choose) - 1]['category']}")
-            print(f"  - Liên kết: {data[int(choose) - 1]['link']}")
-            print(f"  - Trích dẫn: {data[int(choose) - 1]['quote']}")
-            print(f"  - Nội dung: {data[int(choose) - 1]['content']}")
-            break
-        except:
-            print("\nBài viết không tồn tại!")
+        for i in np.argsort(result)[-20:][::-1]:
+            print(all_news[i].split('\n')[0])
+
+    else:
+        print(f'Không tìm thấy bài viết có từ khóa "{search_text}"!')
 
 
 def get_category():
@@ -100,3 +92,6 @@ def common_word():
         words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
 
         print(f"\nThể loại: {category['_id']} \n - Từ xuất hiện nhiều nhất: {words_freq[0][0]} \n - Số lần xuất hiện: {words_freq[0][1]}")
+
+
+search_news()
