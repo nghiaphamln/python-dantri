@@ -3,7 +3,7 @@ import pymongo
 
 # kết nối cơ sở dữ liệu
 def connect_database(collection):
-    my_client = pymongo.MongoClient('mongodb+srv://nghiaph:nghia123@cluster0.szulm.mongodb.net/')
+    my_client = pymongo.MongoClient('YourDataBase')
     my_database = my_client['dantri']
     return my_database[collection]
 
