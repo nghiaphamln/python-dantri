@@ -3,28 +3,29 @@ from bs4 import BeautifulSoup
 import database
 
 
+# lấy soup
 def get_soup(url):
     response = requests.get(url)
     return BeautifulSoup(response.content, 'html5lib')
 
 
-# URL = 'https://dantri.com.vn/the-gioi/pho-thong-doc-texas-treo-thuong-1-trieu-usd-phanh-phui-gian-lan-bau-cu-20201111170458860.htm'
-# URL = 'https://dantri.com.vn/su-kien.htm'
-
-
+# lấy thể loại
 def get_category(soup):
     return soup.find('ul', class_='dt-breadcrumb').find_all('li')[1].a.text
 
 
+# lấy nội dung
 def get_content(soup):
     return ' '.join((soup.find('div', class_='dt-news__body').text.replace('\n', ' ').replace('\r', '')).split())
 
 
+# lấy id từ url
 def get_id(url):
     id = url.split('-')
     return id[-1].replace('.htm', '')
 
 
+# lấy link hình ảnh
 def get_image(soup):
     imageList = []
     image = soup.findAll('img')
@@ -35,8 +36,9 @@ def get_image(soup):
     return imageList
 
 
+# lấy tất cả trường của một tin tức và insert vào database
 def get_news(url):
-    db = database.connect_database()
+    db = database.connect_database("news")
     soup = get_soup(url)
     a = soup.find_all('a', class_='news-item__sapo')
 
